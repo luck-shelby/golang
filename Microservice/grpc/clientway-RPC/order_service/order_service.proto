@@ -1,0 +1,20 @@
+syntax = "proto3";
+package clientWay;
+
+message OrderRequest{
+  string orderId = 1;
+  int64 timeStamp = 2;
+}
+
+message OrderResponse{
+  string OrderId = 1;
+  string OrderName = 2;
+  string OrderStatus = 3;
+}
+
+// 想要通过gRPC框架进行远程服务调用，首先第一步应该是要有服务
+
+// 服务接口的定义  使用stream修饰服务接口的接收参数,
+service OrderService{
+  rpc AddOrderList(stream OrderRequest)returns(OrderResponse){};  //客户端流模式
+}

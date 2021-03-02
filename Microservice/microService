@@ -1,0 +1,121 @@
+微服务: 开发简单,快速响应需求变化, 随时随地更新
+    1. 广义上它是一种分布式系统解决方案,推动细粒度服务的使用,这些服务协同工作
+    2. 微服务框架: 是将复杂的系统使用组件化的方式进行拆分,然后通过轻量级通讯方法进行整合的一种设计方法
+    3. 微服务是通过微服务框架设计方式拆分出来的一个独立的组件化的小应用
+    4. 微服务特性:
+        (1) 单一职责
+        (2) 轻量级通信(REST)
+        (3) 独立性
+        (4) 进程隔离
+        缺点:
+            运维要求高
+            分布式复杂性
+            接口调整成本高
+            代码的重复
+微服务的重要组件:
+    1. 跨语言,跨平台的通讯格式: protobuf
+    2. 通讯的协议grpc,RESTFul API
+    3. 调度管理服务发现 consul
+    4. 微服务框架: micro
+    5. 部署: docker
+
+一、protobuf
+    轻量高效的结构化数据存储格式,用于通讯协议和数据存储的可扩展的序列化结构数据格式
+    与json,xml相比序列化与反序列化快,对空间占用小
+    定义proto文件后使用命令生成代码: protoc --go_out=./ *.proto
+    数据类型对照:
+        .proto	C++	    Java	Python	Go	    Ruby	C#
+        double	double	double	float	float64	Float	double
+        float	float	float	float	float32	Float	float
+        int32	int32	int	int	int32	Fixnum or Bignum	int
+        int64	int64	long	ing/long[3]	int64	Bignum	long
+        uint32	uint32	int[1]	int/long[3]	uint32	Fixnum or Bignum	uint
+        uint64	uint64	long[1]	int/long[3]	uint64	Bignum	ulong
+        sint32	int32	int	intj	int32	Fixnum or Bignum	int
+        sint64	int64	long	int/long[3]	int64	Bignum	long
+        fixed32	uint32	int[1]	int	uint32	Fixnum or Bignum	uint
+        fixed64	uint64	long[1]	int/long[3]	uint64	Bignum	ulong
+        sfixed32	int32	int	int	int32	Fixnum or Bignum	int
+        sfixed64	int64	long	int/long[3]	int64	Bignum	long
+        bool	bool	boolean	boolean	bool	TrueClass/FalseClass	bool
+        string	string	String	str/unicode[4]	string	String(UTF-8)	string
+        bytes	string	ByteString	str	[]byte	String(ASCII-8BIT)	ByteString
+    默认值:
+        字符串类型默认为空字符串
+        字节类型默认为空字节
+        布尔类型默认false
+        数值类型默认为0值
+
+二、rpc
+    RPC: 远程过程调用协议,通过网络从远程计算机程序请求服务,简单来说就是在本地程序调用另外一台服务器上的程序功能、方法的过程
+            这种调用跨越了物理服务器的限制,是在网络中完成的
+            总结: 远程过程调用指的是调用远端服务器上的程序的方法整个过程
+        (1) RPC 客户端程序通过网络调用一个服务端对象的公开方法（大小字母开头）
+        (2) 在 RPC 服务端，需要将这个对象注册为可访问的服务,之后该对象的公开方法就能够以远程的方式提供访问
+        (3) 一个 RPC 服务端可以注册多个不同类型的对象，但不允许注册同一类型的多个对象
+        (4) 一个对象只有满足以下这些条件的方法，才能被 RPC 服务端设置为可提供远程访问
+            必须是在对象外部可公开调用的方法（首字母大写）;
+            必须有两个参数，且参数的类型都必须是包外部可以访问的类型或者是 Go 内建支持的类型;
+            第二个参数必须是一个指针;
+            方法必须返回一个 error 类型的值;
+            func (t *T) MethodName(argType T1, replyType *T2) error
+            类型 T、T1 和 T2 分别对应服务对象所属类型、请求类型和响应类型
+        (5) MethodName: 第一个参数表示由 RPC 客户端传入的请求参数，第二个参数表示要返回给 RPC 客户端的响应结果
+
+三、grpc
+    (1) 在grpc客户端应用可以像调用本地对象一样直接调用另一台不同机器上的服务端应用方法
+    (2) grpc默认使用protoBul,当然也没有使用其他的数据格式如json.
+    (3) 使用步骤:
+        在.proto文件中定义一个服务,使用命令生成代码(需要加上grpc插件): protoc --go_out=plugins=grpc:./ *.
+        编写服务端与客户端
+
+四、consul
+    在一套微服务架构中有很多的服务需要管理,也就是说有很多的grpc
+        (1) consul是基于golang开发
+        (2) consul集群是部署和运行了多个consul代理组成,在consul中有两种角色: server 与 client
+            server: 表示consul的server模式，表明这个consul是个server，这种模式下，功能和CLIENT都一样，唯一不同的是，它会把所有的信息持久化的本地，
+                   这样遇到故障，信息是可以被保留的
+            client: 表示consul的client模式，就是客户端模式。是consul节点的一种模式，这种模式下，所有注册到当前节点的服务会被转发到SERVER，本身是不持久化这些信息。
+                   只维护自身的状态, 并将HTTP和DNS接口请求转发给服务端
+        (3) 所有的节点也被称为Agent,不是客户端就是服务端,Server 节点有一个Leader节点和多个Follower节点，Leader节点会将数据同步到Follower节点，
+                在Leader节点挂掉的时候会启动选举机制产生一个新的 Leader,每个数据中心（DC）的server数推荐至少为1，至多为5
+        (4) consul集群搭建:
+            相关命令参数:
+                -bootstrap-expect: 通知consul server我们现在准备加入的server节点个数,指定后consul会一直等到到达指定的数量后才会引导整个集群
+                -node: 指定节点在集群中的名称,必须是唯一的
+                -bind: 指明节点的IP地址,在集群中必须是可以互通的
+                -server: 指定节点为server
+                -client: 指定节点为client，指定客户端接口的绑定地址，包括：HTTP、DNS、RPC
+                -join: 将节点加入到集群
+                -data-dir: 指定agent储存状态的数据目录
+                -ui: 启动web页面
+                -bootstrap: 表示这个节点是 Server-Leader
+            常用命令:
+                查看consul集群成员 consul members
+                查看集群状态: consul operator raft list-peers
+
+        (5) docker部署consul流程: 172.21.165.61 是宿主机的ip
+            1. docker run -itd --name server-day01 -p 8500:8500 -p 8301:8301 consul /bin/sh
+            2. docker exec -it consul_server_1 /bin/sh
+            3. echo '{"service": {"name": "web","tags": ["master"],"address": "172.21.165.61","port": 8099,"checks": [{"http": "http://172.21.165.61:8099/health","interval": "10s"}]}}' > ./consul.d/web.json
+            4. consul agent -server -bootstrap-expect 1 -data-dir /home/consul -node=monday -config-dir /etc/consul.d/ -bind=172.17.0.2 -ui -client 0.0.0.0
+            5. HTTP API 也可以用于服务查询:
+                curl http://localhost:8500/v1/catalog/service/web
+            6. 其他docker加入集群: 如启动一个client
+                docker run -itd --name server-day01 -p 11500:8500 -p 11301:8301 consul /bin/sh
+                consul agent -data-dir /home/consul -node=tuesday -config-dir /etc/consul.d/ -bind=172.17.0.3 -join 172.17.0.2 -ui
+
+五、Micro微服务框架
+    相当于之前工具的一个集合,使用它可以非常简单的开发出微服务架构的项目
+    micro是一个微服务工具包:
+        1. Go Micro: Go中编写微服务的插件式RPC框架
+        2. API: API主要负责提供将HTTP请求路由到相应微服务的API网关
+        3. Sidecar: Sidecar提供了一种将其他应用程序集成到Micro中
+        4. 安装micro的一系列的工具包: go get -u github.com/micro/micro
+        5. 安装go-micro框架: go get github.com/micro/go-micro
+        注意: gRPC框架时，我们是将.proto文件按照grpc插件的标准来进行编译,但是在go-micro，因此可以按照micro插件来进行编译
+            安装micro框架的protobuf插件: go get github.com/micro/protobuf/{proto,protoc-gen-go}
+            protoc --go_out=plugins=micro:./ message.proto
+
+
+

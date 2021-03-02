@@ -1,0 +1,304 @@
+https://www.jianshu.com/p/ea4a00c6c21c  常用命令
+Docker使用
+    1. 它是开源的容器引擎,中文名称叫码头工人,基于go语言开发,采用C/S架构
+    2. Docker四大核心: IMAGE镜像,CONTAINER容器,DATA VOLUMES数据卷,NETWORK网络
+    3. IMAGE镜像: 是一个Docker的可执行文件,包括运行应用程序所需的代码内容,依赖库,环境变量和配置文件等,通过镜像可以创建一个或者多个容器
+       (1) 搜索Docker Hub（镜像仓库）上的镜像: docker search [镜像名称]
+       (2) 获取Docker Hub（镜像仓库）上的镜像: docker pull [镜像名称]
+       (3) 查看已有的镜像: docker images
+       (4) 镜像重新命名: 对本地镜像的NAME,TAG进行重命名, docker tag [老镜像名称]:[老镜像版本] [新镜像名称]:[新镜像版本]
+            注意: 会新产出一个命名后的镜像,两个镜像指向的时同一个IMAGE ID,在命名时镜像名称不能大写
+       (5) 删除镜像: 将本地的一个或者多个镜像删除 docker rmi [镜像ID]  如果一个IMAGE ID存在多个名称,则 docker rmi [镜像名称]:[镜像版本]
+            或者带上参数 -f 表示强制删除 docker rmi -f [镜像ID]
+       (6) 镜像导出: 将本地一个或者多个镜像打包保存本地的tar文件/zip文件等
+            docker save -o [导出的镜像名称]:[本地镜像名称]
+           镜像导入: 将save打包的镜像导入到本地的镜像库中
+            docker load < [被导入的镜像压缩文件名称]
+       (7) 查看镜像历史信息：docker history [镜像ID] 或者 [镜像名称]:[镜像版本]
+       (8) 查看镜像的详细信息: docker inspect [镜像ID] 或者 [镜像名称]:[镜像版本]
+       (9) 根据模板创建镜像: 首先在模板网站下载一个压缩包后, cat 模板文件名 | docker import - [自定义镜像名称]
+            https://download.openvz.org/template/precreated/
+            docker import -m"this is centos-7" centos-7-x86_64.tar.gz my_centos:test
+  4. CONTAINER容器
+       (1) docker将镜像文件运行起来后,产生的对象就是容器,容器相当于镜像运行起来的一个实例
+       (2) 可以借助docker ps 命令查看运行的容器
+       (3) 容易与虚拟机一样,都会对物理硬件资源进行共享
+       (4) 查看容器: 显示docker容器列表  docker ps
+            CONTAINER ID   IMAGE     COMMAND               CREATED   STATUS         PORTS     NAMES
+            容器ID         基于哪个镜像  运行镜像使用了哪些命令   创建时间   开启还是关闭状态  端口      容器名称
+            docker ps -a : 显示所有运行过的容器,包括已经不在运行的
+       (5) 创建容器:
+            创建一个待启动的容器: docker create [options] IMAGE    [COMMAND] [ARG...]
+                               docker create [参数] 依赖镜像    [容器内命令] [命令参数]
+            -t: 告诉docker为容器建立一个虚拟的命令行终端
+            -i: 打开容器的标准输入
+            -name: 指定容器名称
+            docker create -it --name panda mycentos:test ls -al
+       (6) 启动容器
+            6.1 启一个待启动或者关闭的容器: docker start [容器名称]或者[容器id]
+                参数:  -a 将当前的shell的 stdout 和 stderr连接到容器上  -i 将当前shell的stdin连接到容器上
+                docker start -a 72124c1b1b2e   启动是短暂的
+            6.2 创建一个容器同时启动  docker run [命令参数] [容器名称][执行的命令]
+                参数:
+                 -t: 告诉docker为容器建立一个虚拟的命令行终端
+                 -i: 打开容器的标准输入
+                 -d: 在后台运行容器并打印出容器ID
+                 --rm: 当容器退出时,自动删除容器
+                 --name: 指定容器名称
+                 docker run --rm --name pandaa mycentos:test /bin/echo "hello world"  启动是短暂的
+            6.3 守护进程方式: 最常用的方式,让容器在后台以守护进程形式运行 加上 -d 参数即可
+                以命令方式运行守护式进程：docker run -i -t mycentos:test /bin/bash 当使用Ctrl+Q的方式退出容器再次进入已经退出的容器
+                    docker attach [容器名称]或者[容器id],直接使用exit命令，此时容器就会直接停止
+                以参数设定方式运行守护式进程： docker run -d 容器名(CONTAINER ID或NAME) [COMMAND][ARG...]
+                    [COMMAND][ARG...]”代表需要执行的命令和参数
+                    docker run  -p 33310:3306 -tid --name mysql-master ab2f358b8612 /bin/bash
+                    查看容器运行日志: docker logs -tf --tail 容器名(CONTAINER ID或NAME)
+       (7) 容器的暂停/取消暂停/重启/关闭/删除
+            暂停一个或者多个正在运行的容器: docker pause [容器名称或者容器ID]
+            恢复暂停状态的容器继续运行: docker unpause [容器名称或者容器ID]
+            重启: docker restart [容器名称或者容器ID]  可以加 -t参数 表示重启前等待的时间   restart -t 20 2939f89069cf
+            关闭容器: docker stop [容器名称或者容器ID]
+            终止容器: docket kill [容器名称或者容器ID]
+            删除容器: docker rm [容器名称或者容器ID]   不能删除正在运行中的容器
+                     docker rm -f [容器名称或者容器ID]   强制删除正在运行中的容器
+       (8) 容器的进入与退出:
+            8.1 创建容器的同时进入容器： docker run --name [xxx] -it [容器名称或者容器ID] /bin/bash
+            8.2 手工方式进入: docker exec -it [容器名称或者容器ID] /bin/bash     docker exec -it mysql-master /bin/bash
+            8.3 退出: exit
+       (9) 日志/容器详细信息/重命名
+            查看日志: docker logs [容器名称或者容器ID]
+            容器详细信息: docker inspect [容器名称或者容器ID]
+            重命名：docker rename [容器名称或者容器ID] [容器新名称]
+  5. VOLUMES数据卷
+       (1) 将宿主主机的某一个目录与容器互相映射,在使用docker run 加上 -v参数就是把宿主机的一个目录作为容器的数据卷挂载到容器中,如果
+            路径不存在,则会自动创建
+       (2) docker run -itd --name [xxx] -v [宿主机目录]:[容器目录] [镜像名称 命令 （可选）]
+            docker run -itd --name double -v E:\temp:/tem mysql
+            docker run -tid --name hello -v E:\temp:/temp ab2f358b8612 /bin/bash
+       (3) 数据卷容器: 如果需要在多个容器之间共享数据，最简单的方式就是使用数据卷容器
+            3.1 创建数据卷容器
+            3.2 其他容器挂载数据卷容器
+            数据卷容器自身不需要启动,启动也可以正常工作
+                创建数据卷容器: docker create -v [容器数据卷目录] --name [容器名称][镜像名称]
+                    docker create -v /spark-data --name data-container ab2f358b8612
+                其他容器挂载数据卷容器: docker run --volumes-from [数据卷容器id或者name] -tid --name [容器名称][镜像名称]
+                    docker run --volumes-from ab2f358b8612 -tid --name hello mysql /bin/bash
+            3.3 确认容器共享: 通过docker exec -it xxx /bin/bash  进入有挂载到数据卷容器的容器,操作文件都是实时同步
+  6. 数据备份与还原:
+        (1) 备份步骤:
+            1.1 创建一个挂载在数据卷容器的容器
+            1.2 把宿主机的一个目录挂载作为容器的备份数据卷
+            1.3 将数据卷容器的数据备份到本地目录
+            1.4 完成后销掉第一步创建的容器
+            docker run --rm --volumes-from [数据卷容器id或者name] -v [宿主机目录]:[容器目录][镜像名称][备份命令]
+            docker run --rm --volumes-from 638cb0e9da78 -v E:\temp:/temp-data mysql tar -zcPf /temp-data/data.tar.gz /spark-data
+
+  7. docker网络:
+        (1) 端口映射: 默认情况下,容器和宿主机之间网络是隔离的,我们通过端口映射的方法,将容器的端口映射到宿主机的某个端口上,
+            这样我们就可以通过宿主机的ip+port的方式访问容器里的内容
+        (2) 随机映射 -P
+             docker run -d -P nginx
+             0.0.0.0:49153->80/tcp  通过宿主机的49153端口映射到容器的80端口
+             指定主机随机映射: docker run -d -p [宿主机IP]::[容器端口] -- name [容器名称][镜像名称]
+        (3) 指定映射 -p 宿主机ip:宿主机端口:容器端口
+            docker run -d -p [宿主机IP]:[宿主机端口]:[容器端口] -- name [容器名称][镜像名称]   不指定宿主机IP默认是:0:0:0:0
+            docker run -d -p :1134:80  -- name test nginx
+            多端口映射:  docker run -d -p [宿主机端口1]:[容器端口1] -p [宿主机端口2]:[容器端口2] -- name [容器名称][镜像名称]
+                docker run -d -p 10086:80 10087:1314 --name nb nginx
+        (4) 查看容器端口映射: docker port [容器名称]
+        (4) docker网络命令: 每次端口映射都会在bridge中创建网络容器,网络与容器是相互关联的
+            查看当前docker网络: docker network ls
+            网络模式: bridge模式 docker默认模式,利用宿主机的网卡进行通信,同一个宿主机下的所有容器都在一个网络下,互相可以进行通信
+                     host模式: 容器使用宿主机的ip进行通信,共享网络
+                     none模式: 不会做任何配置,不提供网络服务,容器启动后无网络连接
+            创建桥接网络: ip自动获取
+                docker network create --driver [网络类型][网络名称]  network create --driver bridge bridge-a
+                自定义网段与网关:
+                     docker network create --driver bridge --gateway 172.10.0.1 -- subnet 172.10.0.0/16 bridge-b
+                使用创建的网络:  --net=[网络镜像名称]
+                     docker run -tid --net=45242d8ca3e6 --name ag nginx /bin/bash
+                容器断开网络: docker network disconnect [网络名称][]  docker network disconnect bridge-a ag
+                    断开后查看容器详情: settings-> Networks = {}  网络容器详情: Containers = {}
+                容器连接网络: docker network connect  bridge-a ag
+            创建桥接网络2: 自定义网桥, 网桥是一种设备,根据设备的物理地址划分网段,并传输数据  使用工具: brctl
+            host模式: 使用宿主机的ip,
+                查看host下有哪些容器: docker network inspect host
+                根据host网络创建容器: docker run --net=host -itd --name nb nginx
+            none模式:
+                自定义网络容器与宿主机为同一个网段,容器IP可以指定
+
+DockerFile使用:
+    它是一个脚本,把之前的docker命令以自动化方式实现出来
+    准则: 首字母必须大写, 尽量将Dockerfile文件放在空目录, 每个容器尽量只有一个功能,执行的命令越少越好
+    在本地创一个Dockerfile文件写入: windows 使用touch Dockerfile
+        文件常见命令:
+            1. FROM: 格式 FROM <images>  或 FROM <images>:<tag> 在文件开头,不能缺少,可以有多个FROM
+            2. MAINTAINER: 格式 MAINTAINER <name> 指定dockerfile 维护者信息
+            3. RUN: 两种格式: 如果其中命令需要交互需要确认的化,一定要在命令中添加 -y 参数
+                RUN <command>  shell模式  RUN echo hello
+                RUN ["executable","param1","param2"]  exec模式  RUN ["echo","hello"]
+            4. EXPOSE: 格式 EXPOSE <port>  多个的化使用列表 EXPOSE [port...]
+                设置容器对外暴露的端口
+        运行时命令: 配置容器启动后执行的命令
+            1. CMD 格式: 每个Dockerfile文件只能有一个CMD命令,指定多条,最终也只有一条会被执行,如果在启动容器使用 docker run
+                后面已有启动运行命令的话,那么就会覆盖CMD命令
+                    CMD ["executable","param1","param2"]  exec模式  推荐使用
+                    CMD command param1 param2  shell模式
+                    CMD ["usr/sbin/nginx","-g","daemon off;"]
+                        usr/sbin/nginx: nginx命令
+                        -g: 后面有指令就要用-g
+                        daemon: 后台守护开启或者关闭 on off
+                    Dockerfile文件内容如：
+                        FROM nginx
+                        # 镜像作者
+                        MAINTAINER spark
+                        # 执行的命令
+                        RUN ["mkdir","hello","world"]
+                        # 启动命令
+                        CMD ["/usr/sbin/nginx","-g","daemon off;"]
+                        # 对外端口
+                        EXPOSE 80
+                    编写完成后,进行构建: docker build -t nginx-080:v3.0 文件路径,  执行后就会基于nginx创建出一个新的镜像
+                    基于新的镜像创建两个容器并启动:
+                        docker run -itd --name python3.5 nginx-080:v3.0    创建时不添加命令
+                        docker run -itd --name python3.6 nginx-080:v3.0 /bin/bash  创建时添加命令,覆盖Dockerfile中的CMD命令
+            2.ENTRYPOINT 格式: 每个Dockerfile文件只能有一个CMD命令,指定多条,最终也只有一条会被执行,如果在启动容器使用 docker run
+                后面已有启动运行命令的话,不会被覆盖
+                    ENTRYPOINT ["executable","param1","param2"]  exec模式
+                    ENTRYPOINT command param1 param2  shell模式
+                    后面步骤与CMD一致
+            2. ENTRYPOINT与CMD结合使用
+                 # 启动命令
+                 ENTRYPOINT ["/usr/sbin/nginx"]  不能被覆盖
+                 CMD ["-g"]   可以被覆盖
+            3. 文件编辑指令: ADD  除了将文件从主机复制到容器，ADD 指令还可以使用 URL 规范从远程位置复制文件。
+                格式: ADD <src> <destination>  如果文件是可识别的压缩文件,docker会自动解压缩
+                注意:
+                    1. 如果目标路径不存在,则会自动创建
+                    2. 如果源路径是一个文件,但是目标路径是以 / 结尾,那么docker会把目标路径当作一个目录,会把源文件拷贝到当前目录下
+                    3. 如果原路径是一个目录,就以目录方式拷贝,如何是文件就以文件方式拷贝,以免混乱
+                    4. 如果原文件是一个压缩包,则docker会自动解压到指定的容器目录里  (常用)
+                    # 执行的命令
+                    RUN ["mkdir","hello","world"]
+                    ADD ["sources.list","/tmp/sources.list"]
+                    然后把sources.list放在同一个目录下执行build,执行后去容器查看拷贝是否成功
+                    当原文件是一个压缩包:
+                        ADD ["sources.list.tar.gz","/tmp/"]
+            4. COPY: 与ADD类似, 但是不会做自动解压
+                格式: COPY <src> <destination>  推荐使用
+                    COPY ["index.html","/tmp/html/index.html"]
+            5. VOLUMES: 通过该指令构建出的镜像后,在通过该镜像创建的容器就都有挂载点,然后通过该容器创建一个数据卷容器
+                注意: 无法指定主机上对应的目录,是自动生成的
+                VOLUME ["/LuckDays/"]
+                演示步骤:
+                    docker build -t luckday:v1.0 .
+                    docker run -tid --name luck luckday:v1.0  创建数据卷容器
+                    docker inspect luck
+                        "Volumes": {
+                            "/Luckdays/": {}
+                        },
+                    docker run -itd --name v-1 --volumes-from luck luckday:v1.0   创建容器挂载到数据卷容器
+                    docker run -itd --name v-2 --volumes-from luck luckday:v1.0
+                    docker exec -it v-1 /bin/bash
+                       root@2134ba22a361:/# ls
+                       Luckdays  bin  boot  dev ...
+            6. 环境指令: ENV 设置环境变量,可以在RUN之前使用
+                1. 命令行创建ENV: docker run -e HELLO=world -itd --name day01 nginx /bin/bash
+                    进入到容器：docker exec -it 3e62a0dcf428 /bin/bash  执行: echo 就会输出world
+                2. Dockerfile文件设置
+                    ENV HELLO=world
+            7. workdir: 切换目录,为RUN,CMD,ENTRYPOINT,指令配置工作目录,相当与cd
+                当后续命令是相对路径(没有带 /)那么在后面的WORKDIR会基于上一次的路径进行切换
+                    WORKDIR /tmp/hello
+                    RUN ["touch","text01.txt"]
+                    WORKDIR /tmp
+                    RUN ["touch","text02.txt"]
+                    WORKDIR hello
+                    RUN ["touch","text03.txt"]
+                    最终在hello目录下有2个文件: text01,text03
+3. Dockerfile创建Go环境:
+    FROM ubuntu
+    MAINTAINER luck_day couple6615@gmail.com
+    RUN ["apt-get","update"]
+    RUN ["apt-get","install","vim"]
+    RUN ["apt-get","install","gcc"]
+    RUN ["apt-get","install","git"]
+    ADD ["go1.15.6.linux-amd64.tar.gz","/usr/local/"]
+    ENV GOROOT=/usr/local/go
+    ENV PATH=$PATH:/usr/local/go/bin
+    ENV GOPATH=/root/go
+    ENV PATH=$GOPATH/bin/:$PATH
+    ENV GO111MODULE=on
+    RUN go get github.com/astaxie/beego
+    RUN go get github.com/beego/bee
+    WORKDIR /home
+    RUN ["mkdir","luck_day"]
+    WORKDIR /luck_day
+    RUN go mod init luck
+    COPY day01.go ./
+    EXPOSE 8080
+    ENTRYPOINT ["go","run","day01.go"]
+
+    构建: docker build -t go-test:v1.0
+    运行镜像: docker run -itd -p 8080:8080 go-test:v1.0
+
+4. Docker compose: yml配置 所有操作最好在  docker-compose.yml 所在的目录下
+    (1) 后台启动 docker-compose up -d
+    (2) 删除服务 docker-compose down
+    (3) 查看正在运行的服务  docker-compose ps
+    (4) 启动与停止: 如果不指定服务名 默认是针对所有服务
+        启动服务 docker-compose start <服务名>
+        停止服务 docker-compose stop <服务名>
+    (5) 查看镜像 docker-compose images
+    (6) 查看网络 docker-compose network
+    (7) 进入容器 docker-compose exec <服务名><执行命令>  docker-compose exec web /bin/bash
+    (8) compose文件示例
+        version: '2'    compose版本号
+        services:       服务标识符
+            web01:      子服务名
+                image: 'nginx'    依赖镜像
+                port:
+                    - '10086:8080'
+                volumes:
+                    - ./home/luck:/tmp/day
+                build: Dockerfile所在路径
+                container_name: 'nginx-web'  容器命名
+                depends_on:
+                    - web   镜像依赖的服务
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

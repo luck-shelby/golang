@@ -1,0 +1,49 @@
+// 当用protocol buffer 编译器运行.proto文件,编译器会生成对应语言的代码,对于go会生成 .pd.go文件
+syntax = "proto3";
+// 注释 发送消息
+package microServer;  // 生成go文件对应的包名与目录
+message PersonRequest {
+  string name = 1;
+  int32 age = 2;
+  repeated string hobby = 3;
+}
+
+// 返回消息
+message PersonResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+// 枚举类型  enums类型默认为第一个定义的枚举值，必须是0
+enum EnumAllowingAlias {
+  option allow_alias = true;
+  UNKNOWN = 0;
+  STARTED = 1;
+  RUNNING = 1;
+}
+
+// 你也可以把枚举类型定义到message中
+message SearchRequest {
+  string query = 1;
+  int32 page_number = 2;
+  int32 result_per_page = 3;
+  enum Corpus {
+    UNIVERSAL = 0;
+    WEB = 1;
+    IMAGES = 2;
+    LOCAL = 3;
+    NEWS = 4;
+    PRODUCTS = 5;
+    VIDEO = 6;
+  }
+  Corpus corpus = 4;
+}
+// 使用其它message类型作为字段的类型值
+message SearchResponse{
+  repeated Result results = 1;
+}
+message Result {
+  string url = 1;
+  string title = 2;
+  repeated string snippets = 3;
+}

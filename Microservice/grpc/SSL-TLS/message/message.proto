@@ -1,0 +1,16 @@
+syntax="proto3";
+package ssl_tls;
+
+message RequestArgs{
+  int32 arg1 = 1;
+  int32 arg2 = 2;
+}
+
+message ResponseArgs{
+  int32 code = 1;
+  string msg = 2;
+}
+
+service MathService{
+  rpc AddMethod(RequestArgs)returns(ResponseArgs){};
+}
